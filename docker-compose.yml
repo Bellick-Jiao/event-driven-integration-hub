@@ -1,0 +1,100 @@
+name: integration-hub
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: hub-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-hub}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hub-dev}
+      POSTGRES_DB: ${POSTGRES_DB:-hub}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-hub} -d ${POSTGRES_DB:-hub}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  kafka:
+    image: apache/kafka:4.0.0
+    container_name: hub-kafka
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      # 本机 JVM 直连用 localhost；服务在 compose 内运行时改回 kafka:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_NUM_PARTITIONS: 3
+    ports:
+      - "9092:9092"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+
+  # ============ 可选 profile ============
+  # 启用：docker compose --profile security up -d
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    profiles: ["security"]
+    container_name: hub-keycloak
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    volumes:
+      - ./infra/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+    ports:
+      - "8088:8080"
+
+  # 启用：docker compose --profile observability up -d
+  zipkin:
+    image: openzipkin/zipkin:3
+    profiles: ["observability"]
+    container_name: hub-zipkin
+    ports:
+      - "9411:9411"
+
+  prometheus:
+    image: prom/prometheus:latest
+    profiles: ["observability"]
+    container_name: hub-prometheus
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+
+  # ============ 业务服务（构建完成后启用，见 docs/design.md §15）============
+  # integration-api:
+  #   build: ./services/integration-api
+  #   ports: ["8080:8080"]
+  #   depends_on: [postgres, kafka]
+  #   env_file: .env
+  #
+  # profile-service:
+  #   build: ./services/profile-service
+  #   ports: ["8081:8081"]
+  #   depends_on: [postgres, kafka]
+  #   env_file: .env
+  #
+  # data-loader:
+  #   build: ./services/data-loader
+  #   ports: ["8082:8082"]
+  #   depends_on: [postgres, kafka]
+  #   env_file: .env
+
+volumes:
+  pgdata:

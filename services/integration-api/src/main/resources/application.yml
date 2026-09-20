@@ -1,0 +1,50 @@
+spring:
+  application:
+    name: integration-api
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/hub}
+    username: ${DB_USER:hub}
+    password: ${DB_PASSWORD:hub-dev}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate        # schema is owned by Flyway; JPA only validates
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    enabled: true
+
+  jackson:
+    time-zone: UTC
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    com.bellick.hub: INFO

@@ -1,0 +1,40 @@
+# --- Java / Maven ---
+target/
+*.class
+*.jar
+!**/src/**/*.jar
+*.war
+.mvn/wrapper/maven-wrapper.jar
+
+# --- IDE ---
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+.factorypath
+
+# --- 环境与密钥（绝不入库）---
+.env
+*.local
+*.pem
+*.jks
+*.p12
+
+# --- 日志 ---
+*.log
+logs/
+
+# --- 本地数据 / 容器卷 ---
+pgdata/
+kafka-data/
+zookeeper-data/
+
+# --- 临时/草稿文件 ---
+_*
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+desktop.ini

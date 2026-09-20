@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_BASE: ghcr.io/${{ github.repository_owner }}/integration-hub
+
+jobs:
+  # ---------- 1. 构建 + 测试（含 Testcontainers 集成测试）----------
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: Build & test
+        working-directory: services
+        run: mvn -B -ntp verify
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            services/**/target/surefire-reports
+            services/**/target/failsafe-reports
+
+  # ---------- 2. 构建并推送镜像到 GHCR（main / tag）----------
+  # TODO M3 启用：需要各服务 Dockerfile + 容器化完成
+  docker:
+    needs: build
+    if: false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [integration-api, profile-service, data-loader]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: services/${{ matrix.service }}
+          push: true
+          tags: |
+            ${{ env.IMAGE_BASE }}/${{ matrix.service }}:${{ github.ref_name }}
+            ${{ env.IMAGE_BASE }}/${{ matrix.service }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ---------- 3. kind 集群部署冒烟（main）----------
+  # TODO M3 启用：需要 k8s/ 清单
+  smoke:
+    needs: docker
+    if: false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: helm/kind-action@v1
+        with:
+          cluster_name: hub-smoke
+
+      - name: Deploy manifests
+        run: |
+          kubectl apply -f k8s/
+          kubectl rollout status deployment/integration-api --timeout=180s
+          kubectl rollout status deployment/profile-service --timeout=180s
+          kubectl rollout status deployment/data-loader --timeout=180s
+
+      - name: Smoke test (health)
+        run: |
+          kubectl port-forward svc/integration-api 8080:80 &
+          sleep 5
+          curl -fsS http://localhost:8080/actuator/health
