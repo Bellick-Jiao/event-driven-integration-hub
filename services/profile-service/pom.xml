@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  integration-api - channel-facing REST API + transactional outbox (M1)
-  Port 8080. See docs/design.md §6.1 / §7 / §8.
+  profile-service - "core system" consumer (M2)
+  Port 8081. Consumes customer.profile.events: idempotent processing,
+  exponential-backoff retry, DLQ + replay. See docs/design.md §6.2 / §9 / §10.
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -14,9 +15,9 @@
         <version>0.1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>integration-api</artifactId>
-    <name>integration-api</name>
-    <description>Channel-facing REST API with transactional outbox</description>
+    <artifactId>profile-service</artifactId>
+    <name>profile-service</name>
+    <description>"Core system" consumer: idempotency, retry, DLQ, replay</description>
 
     <dependencies>
         <dependency>
@@ -35,8 +36,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
-        <!-- NOTE: Spring Security / OAuth2 JWT is intentionally NOT in M1 -
-             it arrives in M4 (Keycloak). M1 focuses on the data + outbox story. -->
+
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
 
         <!-- Schema management is version-controlled via Flyway -->
         <dependency>
@@ -54,24 +58,6 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- OpenAPI contract + Swagger UI -->
-        <dependency>
-            <groupId>org.springdoc</groupId>
-            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-        </dependency>
-
-        <!-- Metrics endpoint (actuator /prometheus) - observability story grows in M3 -->
-        <dependency>
-            <groupId>io.micrometer</groupId>
-            <artifactId>micrometer-registry-prometheus</artifactId>
-        </dependency>
-
-        <!-- Kafka (M2): transactional producer for the outbox relay -->
-        <dependency>
-            <groupId>org.springframework.kafka</groupId>
-            <artifactId>spring-kafka</artifactId>
-        </dependency>
-
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -81,6 +67,11 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka-test</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

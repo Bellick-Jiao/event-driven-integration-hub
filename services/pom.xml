@@ -25,6 +25,7 @@
 
     <modules>
         <module>integration-api</module>
+        <module>profile-service</module>
     </modules>
 
     <properties>

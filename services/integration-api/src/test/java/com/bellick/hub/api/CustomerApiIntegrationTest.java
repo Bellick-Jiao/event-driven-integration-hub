@@ -37,7 +37,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *
  * <p>Requires a running Docker daemon (tests are skipped automatically otherwise).
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
+@SpringBootTest(
+        webEnvironment = SpringBootTest.WebEnvironment.MOCK,
+        properties = "hub.relay.enabled=false") // no Kafka in this test; relay covered by OutboxRelayIntegrationTest
 @AutoConfigureMockMvc
 @Testcontainers(disabledWithoutDocker = true)
 class CustomerApiIntegrationTest {

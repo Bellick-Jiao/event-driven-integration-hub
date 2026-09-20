@@ -85,7 +85,7 @@ Watch the event flow end to end: outbox → Kafka → both consumers → both st
 
 - [x] M0 — repo scaffold, infra compose, parent POM
 - [x] M1 — integration-api REST + JPA + Flyway + OpenAPI + transactional outbox (write side) + Testcontainers tests
-- [ ] M2 — outbox relay → Kafka + profile-service (idempotency, retry, DLQ, replay) — *core story*
+- [x] M2 — outbox relay → Kafka (transactional producer) + profile-service (idempotency, retry, DLQ, replay) — *core story*
 - [ ] M3 — data-loader fan-out, observability, CI pipeline
 - [ ] M4 — Keycloak JWT security, k8s manifests + kind smoke deploy, final polish
 
