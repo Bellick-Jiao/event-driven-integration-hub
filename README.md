@@ -86,7 +86,7 @@ Watch the event flow end to end: outbox → Kafka → both consumers → both st
 - [x] M0 — repo scaffold, infra compose, parent POM
 - [x] M1 — integration-api REST + JPA + Flyway + OpenAPI + transactional outbox (write side) + Testcontainers tests
 - [x] M2 — outbox relay → Kafka (transactional producer) + profile-service (idempotency, retry, DLQ, replay) — *core story*
-- [ ] M3 — data-loader fan-out, observability, CI pipeline
+- [x] M3 — data-loader fan-out (second independent consumer group, own Flyway schema), observability (Micrometer + Prometheus, Micrometer Tracing + Zipkin, JSON structured logs with MDC correlation ids), non-root Dockerfiles, CI builds and pushes images to GHCR
 - [ ] M4 — Keycloak JWT security, k8s manifests + kind smoke deploy, final polish
 
 ## Contributing / license

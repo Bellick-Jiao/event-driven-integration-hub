@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # 创建 Kafka topics（KRaft 单节点）
 # 用法：docker compose up -d 之后执行 ./scripts/init-kafka.sh
+# git bash : MSYS_NO_PATHCONV=1 ./scripts/init-kafka.sh
 set -euo pipefail
 
 KC="/opt/kafka/bin/kafka-topics.sh"

@@ -41,11 +41,11 @@ jobs:
             services/**/target/surefire-reports
             services/**/target/failsafe-reports
 
-  # ---------- 2. 构建并推送镜像到 GHCR（main / tag）----------
-  # TODO M3 启用：需要各服务 Dockerfile + 容器化完成
+  # ---------- 2. Build images and push to GHCR (main / tag) ----------
+  # M3 enabled: package the apps, build the per-service image, push.
   docker:
     needs: build
-    if: false
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -56,6 +56,16 @@ jobs:
         service: [integration-api, profile-service, data-loader]
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: Package apps (skip tests, build already verified them)
+        working-directory: services
+        run: mvn -B -ntp -DskipTests package
 
       - uses: docker/setup-buildx-action@v3
 

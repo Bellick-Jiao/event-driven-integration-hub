@@ -13,11 +13,17 @@ spring:
     open-in-view: false
     properties:
       hibernate:
+        # This service owns its own schema on the shared Postgres instance,
+        # so its flyway_schema_history never collides with integration-api /
+        # data-loader (multi-service Flyway rule).
+        default_schema: profile_service
         jdbc:
           time_zone: UTC
 
   flyway:
     enabled: true
+    schemas: profile_service
+    default-schema: profile_service
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
@@ -55,6 +61,13 @@ management:
       enabled: true
     readinessstate:
       enabled: true
+  # M3 observability: sample 100% in this demo, ship spans to Zipkin.
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_ENDPOINT:http://localhost:9411/api/v2/spans}
 
 hub:
   kafka:

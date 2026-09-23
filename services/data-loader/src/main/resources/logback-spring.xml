@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  M3 observability: structured JSON logs on stdout.
+  Micrometer Tracing (Brave) puts traceId/spanId on the MDC automatically;
+  consumers additionally put eventId/customerId on the MDC.
+  LogstashEncoder includes every MDC key, so each line is self-correlating.
+-->
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeMdcKeyName>traceId</includeMdcKeyName>
+            <includeMdcKeyName>eventId</includeMdcKeyName>
+            <includeMdcKeyName>customerId</includeMdcKeyName>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="JSON"/>
+    </root>
+</configuration>

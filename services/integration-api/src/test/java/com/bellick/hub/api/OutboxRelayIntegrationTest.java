@@ -19,6 +19,7 @@ import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.kafka.ConfluentKafkaContainer;
 import org.testcontainers.utility.DockerImageName;
 
 import java.time.Duration;
@@ -53,12 +54,12 @@ class OutboxRelayIntegrationTest {
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine")
             .withDatabaseName("hub")
             .withUsername("hub")
-            .withPassword("hub");
+            .withPassword("hub-dev");
 
     @Container
     @ServiceConnection
-    static final KafkaContainer KAFKA =
-            new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.7.1"));
+    static final ConfluentKafkaContainer KAFKA =
+            new ConfluentKafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.7.1"));
 
     @Autowired
     MockMvc mockMvc;
