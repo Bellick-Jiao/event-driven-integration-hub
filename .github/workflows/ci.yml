@@ -13,7 +13,8 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_BASE: ghcr.io/${{ github.repository_owner }}/integration-hub
+  # GHCR requires the image path to be lowercase (repository_owner is "Bellick-Jiao").
+  IMAGE_BASE: ghcr.io/bellick-jiao/integration-hub
 
 jobs:
   # ---------- 1. 构建 + 测试（含 Testcontainers 集成测试）----------
