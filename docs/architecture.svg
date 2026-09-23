@@ -1,113 +1,113 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 900" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="20">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1700 1200" font-family="Segoe UI, Helvetica, Arial, sans-serif">
   <defs>
-    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#555"/>
     </marker>
-    <marker id="arrowDash" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+    <marker id="arrowDash" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#999"/>
     </marker>
   </defs>
 
-  <text x="650" y="44" text-anchor="middle" font-size="30" font-weight="bold" fill="#222">Event-Driven Integration Hub — high-level architecture</text>
+  <text x="850" y="56" text-anchor="middle" font-size="46" font-weight="bold" fill="#222">Event-Driven Integration Hub — high-level architecture</text>
 
   <!-- API clients -->
-  <rect x="90" y="110" width="280" height="76" rx="10" fill="#f5f5f5" stroke="#666"/>
-  <text x="230" y="145" text-anchor="middle" font-size="22" fill="#222">API Clients</text>
-  <text x="230" y="172" text-anchor="middle" font-size="16" fill="#555">(Banker Portal / Callers)</text>
+  <rect x="120" y="150" width="360" height="100" rx="12" fill="#f5f5f5" stroke="#666"/>
+  <text x="300" y="196" text-anchor="middle" font-size="32" fill="#222">API Clients</text>
+  <text x="300" y="232" text-anchor="middle" font-size="22" fill="#555">(Banker Portal / Callers)</text>
 
   <!-- integration-api -->
-  <rect x="90" y="260" width="280" height="120" rx="10" fill="#dae8fc" stroke="#6c8ebf"/>
-  <text x="230" y="295" text-anchor="middle" font-size="22" font-weight="bold" fill="#1a3a5c">integration-api :8080</text>
-  <text x="230" y="325" text-anchor="middle" font-size="17" fill="#333">REST · Idempotency-Key</text>
-  <text x="230" y="352" text-anchor="middle" font-size="17" fill="#333">Transactional Outbox (write side)</text>
+  <rect x="120" y="360" width="360" height="170" rx="12" fill="#dae8fc" stroke="#6c8ebf"/>
+  <text x="300" y="405" text-anchor="middle" font-size="30" font-weight="bold" fill="#1a3a5c">integration-api :8080</text>
+  <text x="300" y="448" text-anchor="middle" font-size="24" fill="#333">REST · Idempotency-Key</text>
+  <text x="300" y="484" text-anchor="middle" font-size="24" fill="#333">Transactional Outbox (write side)</text>
 
   <!-- Postgres outbox (cylinder) -->
   <g>
-    <ellipse cx="230" cy="480" rx="130" ry="16" fill="#f5f5f5" stroke="#666"/>
-    <path d="M100,480 L100,560 Q100,576 230,576 Q360,576 360,560 L360,480" fill="#f5f5f5" stroke="#666"/>
-    <ellipse cx="230" cy="480" rx="130" ry="16" fill="none" stroke="#666"/>
-    <text x="230" y="515" text-anchor="middle" font-size="17" fill="#333">Postgres — hub DB</text>
-    <text x="230" y="542" text-anchor="middle" font-size="15" fill="#555">customer · outbox · idempotency_keys</text>
+    <ellipse cx="300" cy="650" rx="160" ry="20" fill="#f5f5f5" stroke="#666"/>
+    <path d="M140,650 L140,760 Q140,780 300,780 Q460,780 460,760 L460,650" fill="#f5f5f5" stroke="#666"/>
+    <ellipse cx="300" cy="650" rx="160" ry="20" fill="none" stroke="#666"/>
+    <text x="300" y="698" text-anchor="middle" font-size="24" fill="#333">Postgres — hub DB</text>
+    <text x="300" y="732" text-anchor="middle" font-size="20" fill="#555">customer · outbox · idempotency_keys</text>
   </g>
 
   <!-- Kafka -->
-  <rect x="510" y="260" width="280" height="120" rx="10" fill="#ffe6cc" stroke="#d79b00"/>
-  <text x="650" y="295" text-anchor="middle" font-size="22" font-weight="bold" fill="#7a5200">Apache Kafka (KRaft)</text>
-  <text x="650" y="325" text-anchor="middle" font-size="17" fill="#5c3d00">topic: customer.profile.events</text>
-  <text x="650" y="352" text-anchor="middle" font-size="17" fill="#5c3d00">compacted · keyed by customerId</text>
+  <rect x="660" y="360" width="360" height="170" rx="12" fill="#ffe6cc" stroke="#d79b00"/>
+  <text x="840" y="405" text-anchor="middle" font-size="30" font-weight="bold" fill="#7a5200">Apache Kafka (KRaft)</text>
+  <text x="840" y="448" text-anchor="middle" font-size="24" fill="#5c3d00">topic: customer.profile.events</text>
+  <text x="840" y="484" text-anchor="middle" font-size="24" fill="#5c3d00">compacted · keyed by customerId</text>
 
   <!-- Outbox relay (dashed) -->
-  <rect x="400" y="420" width="220" height="66" rx="8" fill="#ffffff" stroke="#6c8ebf" stroke-dasharray="7,5"/>
-  <text x="510" y="448" text-anchor="middle" font-size="17" fill="#1a3a5c">OutboxRelay (@Scheduled)</text>
-  <text x="510" y="472" text-anchor="middle" font-size="15" fill="#555">PENDING → publish → PUBLISHED</text>
+  <rect x="520" y="600" width="280" height="90" rx="10" fill="#ffffff" stroke="#6c8ebf" stroke-dasharray="9,6"/>
+  <text x="660" y="640" text-anchor="middle" font-size="24" fill="#1a3a5c">OutboxRelay (@Scheduled)</text>
+  <text x="660" y="672" text-anchor="middle" font-size="20" fill="#555">PENDING → publish → PUBLISHED</text>
 
   <!-- profile-service -->
-  <rect x="900" y="170" width="300" height="110" rx="10" fill="#d5e8d4" stroke="#82b366"/>
-  <text x="1050" y="205" text-anchor="middle" font-size="22" font-weight="bold" fill="#2d5a1e">profile-service :8081</text>
-  <text x="1050" y="235" text-anchor="middle" font-size="17" fill="#333">group: profile-service-group</text>
-  <text x="1050" y="262" text-anchor="middle" font-size="17" fill="#333">idempotent · retry → DLQ → replay</text>
+  <rect x="1180" y="230" width="380" height="150" rx="12" fill="#d5e8d4" stroke="#82b366"/>
+  <text x="1370" y="278" text-anchor="middle" font-size="30" font-weight="bold" fill="#2d5a1e">profile-service :8081</text>
+  <text x="1370" y="318" text-anchor="middle" font-size="24" fill="#333">group: profile-service-group</text>
+  <text x="1370" y="352" text-anchor="middle" font-size="24" fill="#333">idempotent · retry → DLQ → replay</text>
 
   <!-- data-loader -->
-  <rect x="900" y="370" width="300" height="110" rx="10" fill="#d5e8d4" stroke="#82b366"/>
-  <text x="1050" y="405" text-anchor="middle" font-size="22" font-weight="bold" fill="#2d5a1e">data-loader :8082</text>
-  <text x="1050" y="435" text-anchor="middle" font-size="17" fill="#333">group: data-loader-group</text>
-  <text x="1050" y="462" text-anchor="middle" font-size="17" fill="#333">fan-out · idempotent wide-table load</text>
+  <rect x="1180" y="510" width="380" height="150" rx="12" fill="#d5e8d4" stroke="#82b366"/>
+  <text x="1370" y="558" text-anchor="middle" font-size="30" font-weight="bold" fill="#2d5a1e">data-loader :8082</text>
+  <text x="1370" y="598" text-anchor="middle" font-size="24" fill="#333">group: data-loader-group</text>
+  <text x="1370" y="632" text-anchor="middle" font-size="24" fill="#333">fan-out · idempotent wide-table load</text>
 
   <!-- Postgres profile -->
   <g>
-    <ellipse cx="1050" cy="560" rx="105" ry="14" fill="#f5f5f5" stroke="#666"/>
-    <path d="M945,560 L945,630 Q945,644 1050,644 Q1155,644 1155,630 L1155,560" fill="#f5f5f5" stroke="#666"/>
-    <ellipse cx="1050" cy="560" rx="105" ry="14" fill="none" stroke="#666"/>
-    <text x="1050" y="590" text-anchor="middle" font-size="15" fill="#333">Postgres · schema: profile_service</text>
-    <text x="1050" y="614" text-anchor="middle" font-size="13" fill="#555">profile_store · processed_events · dlq_events</text>
+    <ellipse cx="1370" cy="780" rx="130" ry="17" fill="#f5f5f5" stroke="#666"/>
+    <path d="M1240,780 L1240,870 Q1240,887 1370,887 Q1500,887 1500,870 L1500,780" fill="#f5f5f5" stroke="#666"/>
+    <ellipse cx="1370" cy="780" rx="130" ry="17" fill="none" stroke="#666"/>
+    <text x="1370" y="818" text-anchor="middle" font-size="20" fill="#333">Postgres · schema: profile_service</text>
+    <text x="1370" y="848" text-anchor="middle" font-size="17" fill="#555">profile_store · processed_events · dlq_events</text>
   </g>
 
   <!-- Postgres warehouse -->
   <g>
-    <ellipse cx="1050" cy="690" rx="105" ry="13" fill="#f5f5f5" stroke="#666"/>
-    <path d="M945,690 L945,755 Q945,768 1050,768 Q1155,768 1155,755 L1155,690" fill="#f5f5f5" stroke="#666"/>
-    <ellipse cx="1050" cy="690" rx="105" ry="13" fill="none" stroke="#666"/>
-    <text x="1050" y="718" text-anchor="middle" font-size="15" fill="#333">Postgres · schema: data_loader</text>
-    <text x="1050" y="740" text-anchor="middle" font-size="13" fill="#555">data_warehouse · processed_events</text>
+    <ellipse cx="1370" cy="950" rx="130" ry="16" fill="#f5f5f5" stroke="#666"/>
+    <path d="M1240,950 L1240,1030 Q1240,1046 1370,1046 Q1500,1046 1500,1030 L1500,950" fill="#f5f5f5" stroke="#666"/>
+    <ellipse cx="1370" cy="950" rx="130" ry="16" fill="none" stroke="#666"/>
+    <text x="1370" y="986" text-anchor="middle" font-size="20" fill="#333">Postgres · schema: data_loader</text>
+    <text x="1370" y="1014" text-anchor="middle" font-size="17" fill="#555">data_warehouse · processed_events</text>
   </g>
 
   <!-- Cross-cutting -->
-  <rect x="140" y="690" width="220" height="64" rx="10" fill="#e1d5e7" stroke="#9673a6"/>
-  <text x="250" y="728" text-anchor="middle" font-size="17" fill="#3d2b4a">Keycloak (OIDC / JWT)</text>
+  <rect x="180" y="950" width="300" height="90" rx="12" fill="#e1d5e7" stroke="#9673a6"/>
+  <text x="330" y="1004" text-anchor="middle" font-size="24" fill="#3d2b4a">Keycloak (OIDC / JWT)</text>
 
-  <rect x="430" y="690" width="210" height="64" rx="10" fill="#e1d5e7" stroke="#9673a6"/>
-  <text x="535" y="728" text-anchor="middle" font-size="17" fill="#3d2b4a">Prometheus (metrics)</text>
+  <rect x="560" y="950" width="280" height="90" rx="12" fill="#e1d5e7" stroke="#9673a6"/>
+  <text x="700" y="1004" text-anchor="middle" font-size="24" fill="#3d2b4a">Prometheus (metrics)</text>
 
-  <rect x="710" y="690" width="230" height="64" rx="10" fill="#e1d5e7" stroke="#9673a6"/>
-  <text x="825" y="728" text-anchor="middle" font-size="17" fill="#3d2b4a">Zipkin (distributed tracing)</text>
+  <rect x="900" y="950" width="320" height="90" rx="12" fill="#e1d5e7" stroke="#9673a6"/>
+  <text x="1060" y="1004" text-anchor="middle" font-size="24" fill="#3d2b4a">Zipkin (distributed tracing)</text>
 
   <!-- Edges -->
-  <line x1="230" y1="186" x2="230" y2="260" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
-  <text x="245" y="228" font-size="15" fill="#555">POST /api/v1/customers</text>
+  <line x1="300" y1="250" x2="300" y2="360" stroke="#555" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <text x="318" y="310" font-size="20" fill="#555">POST /api/v1/customers</text>
 
-  <line x1="230" y1="380" x2="230" y2="464" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
-  <text x="245" y="425" font-size="15" fill="#555">customer + outbox (same tx)</text>
+  <line x1="300" y1="530" x2="300" y2="630" stroke="#555" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <text x="318" y="585" font-size="20" fill="#555">customer + outbox (same tx)</text>
 
-  <path d="M370,320 L510,320" stroke="#555" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
-  <text x="380" y="310" font-size="15" fill="#555">relay: transactional producer</text>
+  <path d="M480,445 L660,445" stroke="#555" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+  <text x="490" y="432" font-size="20" fill="#555">relay: transactional producer</text>
 
-  <path d="M510,420 L510,380" stroke="#999" stroke-width="1.5" stroke-dasharray="7,5" fill="none" marker-end="url(#arrowDash)"/>
+  <path d="M660,600 L660,530" stroke="#999" stroke-width="2" stroke-dasharray="9,6" fill="none" marker-end="url(#arrowDash)"/>
 
-  <path d="M790,290 L900,225" stroke="#555" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
-  <text x="810" y="250" font-size="15" fill="#555">fan-out</text>
+  <path d="M1020,400 L1180,305" stroke="#555" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+  <text x="1040" y="350" font-size="20" fill="#555">fan-out</text>
 
-  <path d="M790,350 L900,425" stroke="#555" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
-  <text x="810" y="395" font-size="15" fill="#555">fan-out</text>
+  <path d="M1020,490 L1180,580" stroke="#555" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+  <text x="1040" y="545" font-size="20" fill="#555">fan-out</text>
 
-  <path d="M1050,280 L1050,546" stroke="#555" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
-  <path d="M1050,480 L1050,677" stroke="#555" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <path d="M1370,380 L1370,763" stroke="#555" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <path d="M1370,660 L1370,933" stroke="#555" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
 
-  <path d="M250,690 L250,380" stroke="#9673a6" stroke-width="1.5" stroke-dasharray="7,5" fill="none" marker-end="url(#arrowDash)"/>
-  <text x="150" y="665" font-size="15" fill="#9673a6">JWT</text>
+  <path d="M330,950 L330,530" stroke="#9673a6" stroke-width="2" stroke-dasharray="9,6" fill="none" marker-end="url(#arrowDash)"/>
+  <text x="200" y="920" font-size="20" fill="#9673a6">JWT</text>
 
-  <path d="M535,690 L370,380" stroke="#9673a6" stroke-width="1.5" stroke-dasharray="7,5" fill="none" marker-end="url(#arrowDash)"/>
-  <text x="400" y="560" font-size="15" fill="#9673a6">/actuator/prometheus</text>
+  <path d="M700,950 L480,530" stroke="#9673a6" stroke-width="2" stroke-dasharray="9,6" fill="none" marker-end="url(#arrowDash)"/>
+  <text x="540" y="760" font-size="20" fill="#9673a6">/actuator/prometheus</text>
 
-  <path d="M825,690 L650,380" stroke="#9673a6" stroke-width="1.5" stroke-dasharray="7,5" fill="none" marker-end="url(#arrowDash)"/>
-  <text x="700" y="540" font-size="15" fill="#9673a6">traceId</text>
+  <path d="M1060,950 L860,530" stroke="#9673a6" stroke-width="2" stroke-dasharray="9,6" fill="none" marker-end="url(#arrowDash)"/>
+  <text x="900" y="720" font-size="20" fill="#9673a6">traceId</text>
 </svg>
