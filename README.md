@@ -13,26 +13,9 @@ This POC was built to practice and demonstrate the skills required for backend /
 
 ## High-level architecture
 
-```
-Banker Channel / API Clients
-        │  POST /api/v1/customers (OAuth2 JWT)
-        ▼
-integration-api (Spring Boot, :8080)
-  REST · JWT Security · Idempotency · Transactional Outbox ──▶ Postgres
-        │  Outbox Relay (transactional producer)
-        ▼
-Kafka (KRaft) ── topic: customer.profile.events (compacted, keyed by customer)
-        │                                  │
-        ▼                                  ▼
-profile-service (:8081)              data-loader (:8082)
-  idempotent consumer                   independent consumer group (fan-out)
-  retry/backoff → DLQ + replay          event-carried state transfer
-        │                                  │
-        ▼                                  ▼
-  core-system store                   data-platform warehouse
-```
+![Event-Driven Integration Hub architecture](docs/architecture.svg)
 
-See [docs/architecture-diagram.html](docs/architecture-diagram.html) for the full diagram, and [docs/design.md](docs/design.md) for the complete design.
+The editable source is [`docs/architecture.drawio`](docs/architecture.drawio) (open it with [diagrams.net](https://app.diagrams.net)).
 
 ## Tech stack
 
