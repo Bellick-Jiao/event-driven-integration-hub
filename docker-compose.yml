@@ -37,6 +37,11 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
       KAFKA_NUM_PARTITIONS: 3
+    volumes:
+      # Persist topics, messages and consumer-group offsets across container
+      # recreates (docker compose down/up). Without this, `down` wipes the
+      # broker and topics must be recreated manually.
+      - kafka-data:/var/kafka/data
     ports:
       - "9092:9092"
     healthcheck:
@@ -98,3 +103,4 @@ services:
 
 volumes:
   pgdata:
+  kafka-data:
