@@ -1,16 +1,15 @@
 # Event-Driven Integration Hub — POC 设计文档
 
-> 面向 **BNZ Integration Developer（Customer360 集成团队）** 申请准备的 Spring Boot 集成型 POC。
-> 职位链接：https://nab.eightfold.ai/careers/job/563980770587260（申请截止 2026-09-27）
-> 本仓库定位：个人学习 + 简历项目。**不是** BNZ 官方项目，也未使用任何 BNZ 内部信息。
+> 一个"银行式"**事件驱动客户 360 集成中枢**的 Spring Boot 集成型 POC——练习并展示后端 / 集成开发岗位的核心技能。
+> 本仓库定位：个人学习 + 简历项目。**不是**任何银行或机构的官方项目，也未使用任何内部信息。
 
 ---
 
-## 1. 为什么做这个项目（与职位 JD 的对应关系）
+## 1. 为什么做这个项目（与岗位技能要求的对应关系）
 
-职位 JD 的硬性要求是：
+典型的后端 / 集成开发岗位技能要求是：
 
-| JD 要求 | 本 POC 如何体现 |
+| 技能要求 | 本 POC 如何体现 |
 | --- | --- |
 | 用 Java + Spring Boot 设计开发服务，含 REST API | `integration-api` 提供完整 REST API（OpenAPI 3 文档、RFC 9457 错误体） |
 | 集成模式（integration patterns） | 事务性发件箱（Transactional Outbox）、幂等消费者（Idempotent Consumer）、死信队列（DLQ）+ 重放、事件扇出（Fan-out）、事件携带状态传输（ECST） |
@@ -18,9 +17,9 @@
 | 可观测性（observability） | 结构化 JSON 日志（含 traceId/eventId）、Micrometer + Prometheus 指标、Zipkin 分布式追踪、健康检查与就绪/存活探针 |
 | 质量、可维护性、性能、安全 | Testcontainers 集成测试、多模块 Maven、输入校验、容器以非 root 用户运行（面向 OpenShift/K8s 安全基线） |
 | 加分项：CI/CD、DevOps、Jenkins、AWS、Kubernetes、API 网关 | GitHub Actions（构建→测试→镜像→kind 集群冒烟）；K8s 清单；OpenShift 兼容镜像（非 root、任意 UID）；文档化 API 网关接入方式 |
-| 加分项：Kafka（你正在补） | 整个项目的消息总线就是 Kafka（KRaft 模式），覆盖生产者、消费者组、分区顺序、重试、DLQ |
+| 加分项：Kafka | 整个项目的消息总线就是 Kafka（KRaft 模式），覆盖生产者、消费者组、分区顺序、重试、DLQ |
 
-**一句话定位**：一个"银行式"的**事件驱动客户 360 集成中枢**——渠道端通过 REST 提交客户档案变更，集成层用 Kafka 异步扇出到"核心系统"和"数据平台"，并完整演示生产级可靠性模式。这正是 Customer360 这类项目里"连接前端、核心系统、数据平台与渠道"的典型形态，面试时一句话就能讲清楚业务价值。
+**一句话定位**：一个"银行式"的**事件驱动客户 360 集成中枢**——渠道端通过 REST 提交客户档案变更，集成层用 Kafka 异步扇出到"核心系统"和"数据平台"，并完整演示生产级可靠性模式。这正是 Customer360 这类项目里"连接前端、核心系统、数据平台与渠道"的典型形态，一句话即可概括其业务价值。
 
 ---
 
@@ -70,18 +69,18 @@
 
 | 组件 | 选型 | 理由 |
 | --- | --- | --- |
-| 语言 / 框架 | Java 21 LTS + Spring Boot 3.5.x | 企业（含 NZ 银行）主流版本；JD 明写 Java + Spring Boot。注：2026 年底 Spring Boot 4.x 已发布，本项目刻意停在 3.x 以贴近生产现状，升级 4.x 可作为加分扩展 |
+| 语言 / 框架 | Java 21 LTS + Spring Boot 3.5.x | 企业（含 NZ 银行）主流版本；岗位要求 Java + Spring Boot。注：2026 年底 Spring Boot 4.x 已发布，本项目刻意停在 3.x 以贴近生产现状，升级 4.x 可作为加分扩展 |
 | 构建 | Maven（多模块 parent + 3 个子模块） | 一次 `mvn verify` 全量构建，CI 简单；多模块也是简历亮点 |
 | 消息 | Apache Kafka 4.x（KRaft-only，无 ZooKeeper） | 你在补 Kafka；KRaft 是当前标准，无需额外组件 |
 | 数据库 | PostgreSQL 16 | 与银行技术栈贴合；业务库/发件箱/幂等表同库不同表 |
 | 安全 | Spring Security + OAuth2 Resource Server（JWT，JWKS 来自 Keycloak 26） | 演示真实企业的"API 保护"方式 |
-| API 文档 | springdoc-openapi 2.x（Swagger UI + `/v3/api-docs`） | 面试展示 API 契约意识 |
+| API 文档 | springdoc-openapi 2.x（Swagger UI + `/v3/api-docs`） | 体现 API 契约意识 |
 | 错误体 | Spring 6 ProblemDetail（RFC 9457） | 零依赖，规范统一 |
 | 可观测性 | logstash-logback-encoder（JSON 日志）+ Micrometer + Prometheus + Micrometer Tracing(Brave) + Zipkin | 覆盖日志/指标/追踪三件套 |
 | 测试 | JUnit 5 + AssertJ + **Testcontainers**（Postgres + Kafka） | 不依赖外部环境即可跑真实集成测试，是重要简历点 |
 | 容器化 | Docker 多阶段构建，非 root（UID 10001）运行 | OpenShift 安全基线（随机 UID 可运行） |
-| CI/CD | GitHub Actions：build → verify → 镜像推送 GHCR → kind 集群冒烟 | 免费、可见、面试可直接演示 |
-| 部署清单 | Kubernetes manifests（Deployment/Service/ConfigMap/Secret/HPA/探针）+ OpenShift 兼容说明 | 命中 JD 的 Kubernetes 加分项；OpenShift 无法本地直跑，用 kind + 兼容镜像贴近 |
+| CI/CD | GitHub Actions：build → verify → 镜像推送 GHCR → kind 集群冒烟 | 免费、结果可见、可公开验证 |
+| 部署清单 | Kubernetes manifests（Deployment/Service/ConfigMap/Secret/HPA/探针）+ OpenShift 兼容说明 | 命中岗位的 Kubernetes 加分项；OpenShift 无法本地直跑，用 kind + 兼容镜像贴近 |
 
 > 版本注意：以上版本号为 2026 年中的主流稳定版本。实际编写时以 Maven Central / Docker Hub 最新稳定 tag 为准，README 中保留 `pom.xml` 依赖版本集中管理。
 
@@ -107,7 +106,7 @@ event-driven-integration-hub/
 ├── docs/
 │   ├── design.md                # 本文档
 │   ├── decisions.md             # 关键技术决策记录（ADR-lite）
-│   ├── resume.md                # 简历措辞 + 面试讲解脚本
+│   ├── k8s-smoke-fixes.md       # kind 冒烟故障排查笔记
 │   └── architecture-diagram.html# 架构示意图
 └── .github/workflows/
     ├── ci.yml                   # 构建 + 测试 + 镜像 + kind 冒烟
@@ -227,7 +226,7 @@ idempotency_keys(idempotency_key VARCHAR PK, request_hash VARCHAR,
 | 投递语义 | 生产者事务 + `enable.idempotence=true`；消费者 `enable.auto.commit=false` + 手动 ACK；整体呈 **at-least-once**，配合消费端幂等 → 逻辑上 exactly-once 效果 |
 | 事件信封 | `{eventId, type, schemaVersion, occurredAt, customerId, sourceChannel, traceId, payload}`，schemaVersion 从 1 开始，payload 为完整客户快照（ECST） |
 
-事件类型：`CustomerCreated` / `CustomerUpdated` / `AddressChanged`。新版本字段演进：`schemaVersion` 升到 2 并保留向后兼容（消费者按版本分支处理）——这是面试可讲的"消息契约演进"话题。
+事件类型：`CustomerCreated` / `CustomerUpdated` / `AddressChanged`。新版本字段演进：`schemaVersion` 升到 2 并保留向后兼容（消费者按版本分支处理）——这是可引申的"消息契约演进"话题。
 
 topic 创建脚本（`scripts/init-kafka.sh`）：
 
@@ -241,9 +240,9 @@ docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server loca
 
 ---
 
-## 10. 集成模式清单（面试重点）
+## 10. 集成模式清单
 
-| 模式 | 在哪实现 | 解决什么问题 | 面试一句话 |
+| 模式 | 在哪实现 | 解决什么问题 | 一句话解释 |
 | --- | --- | --- | --- |
 | 事务性发件箱 | integration-api：customer+outbox 同事务，relay 发布 | 双写不一致（DB 写成功但消息没发） | "我用发件箱保证数据库与消息的原子性，避免分布式事务" |
 | 幂等消费 | profile-service：`processed_events` 唯一键 | at-least-once 投递下的重复消息 | "消费端用事件 ID 去重，重复投递不产生副作用" |
@@ -270,7 +269,7 @@ docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server loca
 - **API 保护**：integration-api 配 OAuth2 Resource Server，从 Keycloak 的 JWKS 校验 JWT；`ROLE_BANKER` 才能写，读接口也要认证（演示最小权限）。
 - **密钥管理**：本地用 `.env`（不入库），k8s 用 Secret；容器内不硬编码凭据。
 - **日志与响应**：PII 掩码；错误信息不泄露内部细节。
-- **扩展方案（文档化即可）**：服务间 mTLS（自签 CA 脚本）、Kafka SASL/SSL、API 网关（Apisix/Kong/Spring Cloud Gateway）前置限流与审计。面试可答"我知道生产环境还需要什么，并且给出了落地路径"。
+- **扩展方案（文档化即可）**：服务间 mTLS（自签 CA 脚本）、Kafka SASL/SSL、API 网关（Apisix/Kong/Spring Cloud Gateway）前置限流与审计——体现"我知道生产环境还需要什么，并给出了落地路径"。
 
 ---
 
@@ -338,25 +337,17 @@ curl -X POST http://localhost:8080/api/v1/customers \
 | **M1** | integration-api：REST CRUD + JPA + Flyway + OpenAPI + 健康检查 | Spring Boot 基础、Spring Data JPA | 1–2 个周末 |
 | **M2** | 发件箱 + Kafka 生产者；profile-service 消费者 + 幂等 + 重试 + DLQ + 重放 | **Kafka 核心**（生产者/消费者/分区/重试/DLQ）——本项目最核心故事 | 1–2 个周末 |
 | **M3** | data-loader 扇出；可观测性三件套；Testcontainers 全链路测试；CI 流水线 | Micrometer/追踪/JSON 日志；**CI/CD**；测试工程化 | 1–2 个周末 |
-| **M4** | Keycloak JWT 保护；k8s 清单 + kind 冒烟；README 最终打磨 + 简历文案 | **OpenShift/K8s 部署概念**；安全 | 1 个周末 |
+| **M4** | Keycloak JWT 保护；k8s 清单 + kind 冒烟；README 最终打磨 | **OpenShift/K8s 部署概念**；安全 | 1 个周末 |
 
-> 优先保证 **M2 完成**——发件箱 + Kafka + DLQ 是简历和面试的核心。M3/M4 是"生产级"加分项，做不完也不影响主线故事。
-
----
-
-## 17. 面试与简历
-
-完整措辞与讲解脚本见 **`docs/resume.md`**。核心叙事一句话：
-
-> "我独立设计并实现了一个事件驱动的银行集成中枢：Spring Boot REST API 用事务性发件箱把客户档案变更发布到 Kafka，两个下游（核心系统、数据平台）幂等消费、失败进死信队列可重放；整个系统配了 JSON 结构化日志、Prometheus 指标、Zipkin 追踪，用 Testcontainers 跑真实集成测试，GitHub Actions 构建、打包、推到 GHCR，并在 kind 集群里做部署冒烟。"
+> 优先保证 **M2 完成**——发件箱 + Kafka + DLQ 是项目的核心主线。M3/M4 是"生产级"加分项，做不完也不影响主线故事。
 
 ---
 
-## 18. 扩展方向（做完主线后的加分项，按性价比排序）
+## 17. 扩展方向（做完主线后的加分项，按性价比排序）
 
 1. **Schema Registry**（Apicurio/Confluent）：消息契约集中管理 + 兼容性检查——直接对位"集成平台"心智。
-2. **mTLS 服务间通信**：脚本生成自签 CA，展示证书与双向认证（JD 提到 certificates）。
-3. **API 网关前置**（Apisix / Spring Cloud Gateway）：限流、审计、路由——对位 JD 的 "API gateway / API management"。
+2. **mTLS 服务间通信**：脚本生成自签 CA，展示证书与双向认证（岗位要求提到 certificates）。
+3. **API 网关前置**（Apisix / Spring Cloud Gateway）：限流、审计、路由——对位 "API gateway / API management"。
 4. **Kafka SASL/SSL**：从明文升级认证加密，展示安全深度。
 5. **契约测试 Pact**：消费者驱动契约，验证"提供方/消费方"演进。
 6. **Spring Boot 4.x 升级**：展示版本演进能力。
