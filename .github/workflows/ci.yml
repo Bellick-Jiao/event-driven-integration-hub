@@ -143,9 +143,10 @@ jobs:
           test -n "$TOKEN"
           # Health probe is public (no token needed).
           curl -fsS http://localhost:8080/actuator/health
-          # Secured write: requires the BANKER role from the JWT.
+          # Secured write: requires the BANKER role from the JWT. customerId
+          # must match CUS-XXXX (XXXX = digits) per the API validation rule.
           curl -fsS -X POST http://localhost:8080/api/v1/customers \
             -H "Authorization: Bearer $TOKEN" \
             -H "Idempotency-Key: smoke-001" \
             -H "Content-Type: application/json" \
-            -d '{"customerId":"CUS-SMOKE-1","name":"Smoke Test","email":"smoke@example.com","addresses":[],"kycStatus":"PENDING"}'
+            -d '{"customerId":"CUS-9001","name":"Smoke Test","email":"smoke@example.com","addresses":[],"kycStatus":"PENDING"}'

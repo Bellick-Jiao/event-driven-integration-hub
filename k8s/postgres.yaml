@@ -18,8 +18,11 @@ spec:
     metadata:
       labels: { app: postgres }
     spec:
+      # NOTE: no runAsNonRoot here on purpose — the official postgres image
+      # starts as root and switches to the postgres user itself; K8s would
+      # reject it with runAsNonRoot: true. Production: use a hardened image
+      # or the CloudNativePG operator.
       securityContext:
-        runAsNonRoot: true
         seccompProfile: { type: RuntimeDefault }
       containers:
         - name: postgres

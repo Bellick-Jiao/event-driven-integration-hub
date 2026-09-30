@@ -21,8 +21,10 @@ spec:
     metadata:
       labels: { app: kafka }
     spec:
+      # Single-node KRaft: the controller quorum points at 127.0.0.1 (this
+      # broker) so startup never depends on DNS. Clients still reach the
+      # broker via the headless Service name kafka:9092.
       securityContext:
-        runAsNonRoot: true
         seccompProfile: { type: RuntimeDefault }
       containers:
         - name: kafka
@@ -31,12 +33,19 @@ spec:
             - { name: plaintext, containerPort: 9092 }
             - { name: controller, containerPort: 9093 }
           env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
             - { name: KAFKA_NODE_ID, value: "1" }
             - { name: KAFKA_PROCESS_ROLES, value: "broker,controller" }
-            - { name: KAFKA_CONTROLLER_QUORUM_VOTERS, value: "1@kafka:9093" }
+            - { name: KAFKA_CONTROLLER_QUORUM_VOTERS, value: "1@127.0.0.1:9093" }
             - { name: KAFKA_LISTENERS, value: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093" }
-            # In-cluster clients resolve kafka:9092 via the headless service.
-            - { name: KAFKA_ADVERTISED_LISTENERS, value: "PLAINTEXT://kafka:9092" }
+            # Advertise the pod IP: clients (and the readiness probe inside this
+            # pod) reach the broker directly, so startup and health never depend
+            # on the headless Service DNS — which only exists once the pod is
+            # Ready (a chicken-and-egg deadlock otherwise).
+            - { name: KAFKA_ADVERTISED_LISTENERS, value: "PLAINTEXT://$(POD_IP):9092" }
             - { name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP, value: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT" }
             - { name: KAFKA_CONTROLLER_LISTENER_NAMES, value: "CONTROLLER" }
             - { name: KAFKA_INTER_BROKER_LISTENER_NAME, value: "PLAINTEXT" }

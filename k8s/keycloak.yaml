@@ -82,8 +82,13 @@ spec:
       containers:
         - name: keycloak
           image: quay.io/keycloak/keycloak:26.0
-          command: ["start-dev", "--import-realm"]
-          args: ["--http-port=8080"]
+          # K8s `command` fully overrides the image entrypoint (compose appends
+          # to it instead), so the full path to the start script is required.
+          command: ["/opt/keycloak/bin/kc.sh", "start-dev", "--import-realm"]
+          # Pin the issuer host: Keycloak otherwise derives it from the request
+          # Host header (e.g. localhost:8088 through a port-forward), and then
+          # integration-api's issuer validation (keycloak:8080) rejects the JWT.
+          args: ["--http-port=8080", "--hostname=http://keycloak:8080", "--hostname-strict=false"]
           ports:
             - { containerPort: 8080 }
           env:
