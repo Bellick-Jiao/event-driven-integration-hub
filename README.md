@@ -16,6 +16,10 @@ This POC was built to practice and demonstrate the skills required for backend /
 ![Event-Driven Integration Hub architecture](docs/architecture.svg)
 
 The editable source is [`docs/architecture.drawio`](docs/architecture.drawio) (open it with [diagrams.net](https://app.diagrams.net)).
+Design decisions and the full POC write-up live in [`docs/design.md`](docs/design.md);
+[`docs/k8s-smoke-fixes.md`](docs/k8s-smoke-fixes.md) documents the real
+troubleshooting behind the Kubernetes smoke deploy (five root causes, each
+with the interview angle).
 
 ## Tech stack
 
