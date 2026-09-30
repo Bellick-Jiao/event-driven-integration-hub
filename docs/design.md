@@ -70,17 +70,17 @@
 | 组件 | 选型 | 理由 |
 | --- | --- | --- |
 | 语言 / 框架 | Java 21 LTS + Spring Boot 3.5.x | 企业（含 NZ 银行）主流版本；岗位要求 Java + Spring Boot。注：2026 年底 Spring Boot 4.x 已发布，本项目刻意停在 3.x 以贴近生产现状，升级 4.x 可作为加分扩展 |
-| 构建 | Maven（多模块 parent + 3 个子模块） | 一次 `mvn verify` 全量构建，CI 简单；多模块也是简历亮点 |
+| 构建 | Maven（多模块 parent + 3 个子模块） | 一次 `mvn verify` 全量构建，CI 简单；多模块也让结构清晰 |
 | 消息 | Apache Kafka 4.x（KRaft-only，无 ZooKeeper） | 你在补 Kafka；KRaft 是当前标准，无需额外组件 |
 | 数据库 | PostgreSQL 16 | 与银行技术栈贴合；业务库/发件箱/幂等表同库不同表 |
 | 安全 | Spring Security + OAuth2 Resource Server（JWT，JWKS 来自 Keycloak 26） | 演示真实企业的"API 保护"方式 |
 | API 文档 | springdoc-openapi 2.x（Swagger UI + `/v3/api-docs`） | 体现 API 契约意识 |
 | 错误体 | Spring 6 ProblemDetail（RFC 9457） | 零依赖，规范统一 |
 | 可观测性 | logstash-logback-encoder（JSON 日志）+ Micrometer + Prometheus + Micrometer Tracing(Brave) + Zipkin | 覆盖日志/指标/追踪三件套 |
-| 测试 | JUnit 5 + AssertJ + **Testcontainers**（Postgres + Kafka） | 不依赖外部环境即可跑真实集成测试，是重要简历点 |
+| 测试 | JUnit 5 + AssertJ + **Testcontainers**（Postgres + Kafka） | 不依赖外部环境即可跑真实集成测试 |
 | 容器化 | Docker 多阶段构建，非 root（UID 10001）运行 | OpenShift 安全基线（随机 UID 可运行） |
 | CI/CD | GitHub Actions：build → verify → 镜像推送 GHCR → kind 集群冒烟 | 免费、结果可见、可公开验证 |
-| 部署清单 | Kubernetes manifests（Deployment/Service/ConfigMap/Secret/HPA/探针）+ OpenShift 兼容说明 | 命中岗位的 Kubernetes 加分项；OpenShift 无法本地直跑，用 kind + 兼容镜像贴近 |
+| 部署清单 | Kubernetes manifests（Deployment/Service/ConfigMap/Secret/HPA/探针）+ OpenShift 兼容说明 | 契合 OpenShift/K8s 部署要求；OpenShift 无法本地直跑，用 kind + 兼容镜像贴近 |
 
 > 版本注意：以上版本号为 2026 年中的主流稳定版本。实际编写时以 Maven Central / Docker Hub 最新稳定 tag 为准，README 中保留 `pom.xml` 依赖版本集中管理。
 
@@ -120,7 +120,7 @@ event-driven-integration-hub/
 三个服务都是独立可部署的 Spring Boot 应用，共用父 POM。建议包结构（以 integration-api 为例，其余类似）：
 
 ```
-com.example.hub.api
+com.bellick.hub.api
 ├── ApiApplication.java
 ├── config/        # SecurityConfig、KafkaConfig、JacksonConfig
 ├── controller/    # CustomerController、DlqController(在 profile-service)
@@ -211,7 +211,7 @@ idempotency_keys(idempotency_key VARCHAR PK, request_hash VARCHAR,
 
 **data-loader 库**：`data_warehouse(customer_id PK, snapshot JSONB, loaded_at)`。
 
-> POC 用 JPA + Flyway 管理 schema 迁移（Flyway 也是简历点：数据库变更受版本控制）。
+> POC 用 JPA + Flyway 管理 schema 迁移（数据库变更受版本控制）。
 
 ---
 
@@ -257,7 +257,7 @@ docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server loca
 
 ## 11. 可观测性设计
 
-- **结构化日志**：logstash-logback-encoder 输出 JSON，MDC 注入 `traceId / eventId / customerId / service`；**PII 掩码**（邮箱、手机号在日志中打码——银行场景加分项）。
+- **结构化日志**：logstash-logback-encoder 输出 JSON，MDC 注入 `traceId / eventId / customerId / service`；**PII 掩码**（邮箱、手机号在日志中打码——银行场景惯例）。
 - **指标**：Micrometer 自定义 counter/timer：`hub.events.published`、`hub.events.consumed`、`hub.events.dlq`、`hub.retries`、消费延迟；配合 Kafka 客户端指标。
 - **追踪**：Micrometer Tracing + Brave，Kafka 消息头透传 `traceId`，Zipkin 展示端到端链路（POST → 发布 → 消费 → 落库）。
 - **健康检查**：liveness/readiness 探针（含 Kafka、DB 依赖检查），k8s 清单直接使用。
@@ -282,7 +282,7 @@ docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server loca
 | 契约/文档 | OpenAPI 文件即契约；swagger-ui 可交互 | springdoc |
 | CI 冒烟 | kind 集群部署三服务 → curl 健康检查 → 发一条 POST 验证端到端 | GitHub Actions |
 
-> Testcontainers 是本次 POC 的重要简历点："集成测试不依赖任何外部环境，CI 里也能稳定运行"。
+> Testcontainers 让集成测试不依赖任何外部环境，在 CI 里也能稳定运行。
 
 ---
 
@@ -339,7 +339,7 @@ curl -X POST http://localhost:8080/api/v1/customers \
 | **M3** | data-loader 扇出；可观测性三件套；Testcontainers 全链路测试；CI 流水线 | Micrometer/追踪/JSON 日志；**CI/CD**；测试工程化 | 1–2 个周末 |
 | **M4** | Keycloak JWT 保护；k8s 清单 + kind 冒烟；README 最终打磨 | **OpenShift/K8s 部署概念**；安全 | 1 个周末 |
 
-> 优先保证 **M2 完成**——发件箱 + Kafka + DLQ 是项目的核心主线。M3/M4 是"生产级"加分项，做不完也不影响主线故事。
+> M1–M4 已全部完成并在 CI 中持续验证（构建、测试、镜像、kind 冒烟）。
 
 ---
 
@@ -374,7 +374,7 @@ spec:
         seccompProfile: { type: RuntimeDefault }
       containers:
         - name: integration-api
-          image: ghcr.io/<your-user>/integration-hub/integration-api:latest
+          image: ghcr.io/bellick-jiao/integration-hub/integration-api:latest
           ports: [{ containerPort: 8080 }]
           envFrom: [{ configMapRef: { name: hub-config } }, { secretRef: { name: hub-secrets } }]
           readinessProbe: { httpGet: { path: /actuator/health/readiness, port: 8080 }, initialDelaySeconds: 15 }

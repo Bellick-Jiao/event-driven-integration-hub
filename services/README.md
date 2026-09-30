@@ -4,9 +4,9 @@
 
 | Module | Port | Status | Purpose |
 | --- | --- | --- | --- |
-| `integration-api` | 8080 | **M1 + M2 done** | Channel-facing REST API + transactional outbox (write side) + **outbox relay → Kafka** |
-| `profile-service` | 8081 | **M2 done** | "Core system" consumer: idempotency, retry, DLQ, replay |
-| `data-loader` | 8082 | M3 (planned) | "Data platform" consumer: event fan-out, event-carried state |
+| `integration-api` | 8080 | **M1–M4 done** | Channel-facing REST API + transactional outbox (write side) + **outbox relay → Kafka** + Keycloak JWT security |
+| `profile-service` | 8081 | **M1–M4 done** | "Core system" consumer: idempotency, retry, DLQ, replay |
+| `data-loader` | 8082 | **M1–M4 done** | "Data platform" consumer: event fan-out, event-carried state |
 
 ## M1 — what is implemented
 
@@ -37,6 +37,32 @@
 - Admin API:
   - `GET /admin/dlq` — list dead letters
   - `POST /admin/dlq/{eventId}/replay` — republish the original envelope back to the main topic and mark `REPLAYED`
+
+## M3 — what is implemented (fan-out + observability)
+
+- **data-loader** (`:8082`): a second, independent consumer group on the same
+  `customer.profile.events` topic — proves one-to-many **fan-out**. It upserts
+  the full customer snapshot (event-carried state transfer) into
+  `data_warehouse` (a wide table simulating a data platform), with its own
+  Flyway schema.
+- **Observability** across all three services: structured JSON logs with MDC
+  correlation ids (`traceId`, `eventId`, `customerId`), Micrometer + Prometheus
+  metrics (`hub.events.published`, `hub.events.consumed`, `hub.events.dlq`, …),
+  Micrometer Tracing + Zipkin with the `traceId` propagated over Kafka message
+  headers, and liveness/readiness probes.
+- **CI**: GitHub Actions builds and pushes the three images to GHCR.
+
+## M4 — what is implemented (security + Kubernetes)
+
+- **integration-api** is an OAuth2 resource server: every request needs a JWT
+  from the Keycloak `hub` realm; write endpoints additionally require the
+  `BANKER` realm role. No token → `401`, no role → `403`.
+- **Kubernetes**: kustomize manifests under `k8s/` (namespace `hub`) for
+  Postgres, single-broker Kafka (KRaft), Keycloak and the three services —
+  Deployments, Services, ConfigMap/Secret, readiness/liveness probes, HPAs.
+  CI runs a **kind smoke deploy** on every `main` push and proves the secured
+  end-to-end path (JWT → POST → `202`). See `../docs/k8s-smoke-fixes.md` for
+  the troubleshooting notes behind it.
 
 ## Run it
 

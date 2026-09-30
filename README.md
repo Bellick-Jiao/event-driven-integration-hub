@@ -43,7 +43,7 @@ services/data-loader       "Data platform" consumer: event-carried state   (:808
 docker-compose.yml         Infra: Postgres + Kafka (+ optional Keycloak/Zipkin/Prometheus)
 k8s/                       Kubernetes manifests (Deployment/Service/ConfigMap/Secret/HPA)
 .github/workflows/         CI: build → Testcontainers tests → GHCR images → kind smoke test
-docs/                      design.md · decisions.md · resume.md · architecture diagram
+docs/                      design.md · decisions.md · k8s-smoke-fixes.md · architecture diagram
 ```
 
 ## Quick start
