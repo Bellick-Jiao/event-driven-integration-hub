@@ -14,7 +14,10 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -29,6 +32,7 @@ import java.util.Properties;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -77,6 +81,7 @@ class OutboxRelayIntegrationTest {
         mockMvc.perform(post("/api/v1/customers")
                         .header("Idempotency-Key", "key-relay-1")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .with(bankerJwt())
                         .content("""
                                 {
                                   "customerId": "CUS-2001",
@@ -110,6 +115,15 @@ class OutboxRelayIntegrationTest {
     // ------------------------------------------------------------
     // helper: poll the topic with a throwaway consumer until the record shows up
     // ------------------------------------------------------------
+
+    /**
+     * Mock JWT carrying the {@code ROLE_BANKER} authority (what
+     * {@code SecurityConfig} derives from a real Keycloak token's
+     * {@code realm_access.roles} claim).
+     */
+    private static RequestPostProcessor bankerJwt() {
+        return jwt().authorities(new SimpleGrantedAuthority("ROLE_BANKER"));
+    }
 
     private ConsumerRecord<String, String> awaitRecordForKey(String customerId) throws Exception {
         Properties props = new Properties();

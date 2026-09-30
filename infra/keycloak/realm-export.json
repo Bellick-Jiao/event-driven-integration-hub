@@ -1,0 +1,54 @@
+{
+  "realm": "hub",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": false,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "roles": {
+    "realm": [
+      {
+        "name": "BANKER",
+        "description": "Role required to write customer profiles (POST/PATCH /api/v1/customers)"
+      }
+    ]
+  },
+  "users": [
+    {
+      "username": "banker",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Demo",
+      "lastName": "Banker",
+      "email": "banker@example.com",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "banker-dev",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["BANKER"]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "integration-api",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["*"],
+      "webOrigins": ["*"],
+      "attributes": {
+        "post.logout.redirect.uris": "+"
+      }
+    }
+  ]
+}

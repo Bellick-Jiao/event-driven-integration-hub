@@ -35,8 +35,17 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
-        <!-- NOTE: Spring Security / OAuth2 JWT is intentionally NOT in M1 -
-             it arrives in M4 (Keycloak). M1 focuses on the data + outbox story. -->
+        <!-- M4 security: OAuth2 Resource Server validating JWTs signed by Keycloak.
+             Write endpoints require the BANKER realm role; everything else needs
+             a valid token. Health/OpenAPI endpoints stay public for probes. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+        </dependency>
 
         <!-- Schema management is version-controlled via Flyway -->
         <dependency>
@@ -76,6 +85,12 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- M4: SecurityMockMvcRequestPostProcessors.jwt() to authenticate integration tests -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

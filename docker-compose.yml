@@ -26,7 +26,8 @@ services:
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
-      # 本机 JVM 直连用 localhost；服务在 compose 内运行时改回 kafka:9092
+      # Local JVM clients connect via localhost; services inside the compose
+      # network override this with kafka:9092 (see .env).
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
@@ -50,8 +51,8 @@ services:
       timeout: 10s
       retries: 15
 
-  # ============ 可选 profile ============
-  # 启用：docker compose --profile security up -d
+  # ============ optional profiles ============
+  # Enable with: docker compose --profile security up -d
   keycloak:
     image: quay.io/keycloak/keycloak:26.0
     profiles: ["security"]
@@ -65,7 +66,7 @@ services:
     ports:
       - "8088:8080"
 
-  # 启用：docker compose --profile observability up -d
+  # Enable with: docker compose --profile observability up -d
   zipkin:
     image: openzipkin/zipkin:3
     profiles: ["observability"]
@@ -82,7 +83,7 @@ services:
     ports:
       - "9090:9090"
 
-  # ============ 业务服务（构建完成后启用，见 docs/design.md §15）============
+  # ============ business services (enable after a build; see docs/design.md §15) ============
   # integration-api:
   #   build: ./services/integration-api
   #   ports: ["8080:8080"]

@@ -12,8 +12,11 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -22,6 +25,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -34,6 +38,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * <p>Verifies the M1 core contract: one transaction writes customer + outbox;
  * idempotency keys are replayed without duplication; conflicts are 409;
  * validation failures are 400 and must NOT leave any rows behind.
+ *
+ * <p>M4: requests are authenticated with a mock JWT (spring-security-test).
+ * The {@code jwt()} post-processor injects the token directly, so no Keycloak
+ * is needed here; 401 (no token) and 403 (no BANKER role) are covered too.
  *
  * <p>Requires a running Docker daemon (tests are skipped automatically otherwise).
  */
@@ -79,6 +87,7 @@ class CustomerApiIntegrationTest {
         mockMvc.perform(post("/api/v1/customers")
                         .header("Idempotency-Key", "key-create-1")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .with(bankerJwt())
                         .content(CREATE_BODY))
                 .andExpect(status().isAccepted())
                 .andExpect(header().string("Location", "/api/v1/customers/CUS-1001"))
@@ -102,6 +111,7 @@ class CustomerApiIntegrationTest {
         mockMvc.perform(post("/api/v1/customers")
                         .header("Idempotency-Key", "key-create-2")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .with(bankerJwt())
                         .content(CREATE_BODY.replace("CUS-1001", "CUS-1002")))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.eventId").value(firstEventId));
@@ -114,12 +124,14 @@ class CustomerApiIntegrationTest {
         mockMvc.perform(post("/api/v1/customers")
                         .header("Idempotency-Key", "key-create-3")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .with(bankerJwt())
                         .content(CREATE_BODY.replace("CUS-1001", "CUS-1003")))
                 .andExpect(status().isAccepted());
 
         mockMvc.perform(post("/api/v1/customers")
                         .header("Idempotency-Key", "key-create-3")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .with(bankerJwt())
                         .content(CREATE_BODY.replace("CUS-1001", "CUS-1003").replace("Jane Doe", "Jane Roe")))
                 .andExpect(status().isConflict());
     }
@@ -129,12 +141,14 @@ class CustomerApiIntegrationTest {
         mockMvc.perform(post("/api/v1/customers")
                         .header("Idempotency-Key", "key-create-4a")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .with(bankerJwt())
                         .content(CREATE_BODY.replace("CUS-1001", "CUS-1004")))
                 .andExpect(status().isAccepted());
 
         mockMvc.perform(post("/api/v1/customers")
                         .header("Idempotency-Key", "key-create-4b")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .with(bankerJwt())
                         .content(CREATE_BODY.replace("CUS-1001", "CUS-1004")))
                 .andExpect(status().isConflict());
     }
@@ -144,6 +158,7 @@ class CustomerApiIntegrationTest {
         mockMvc.perform(post("/api/v1/customers")
                         .header("Idempotency-Key", "key-create-5")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .with(bankerJwt())
                         .content("""
                                 {"customerId": "bad-id", "name": "", "email": "not-an-email"}
                                 """))
@@ -157,6 +172,7 @@ class CustomerApiIntegrationTest {
     void missingIdempotencyKey_returns400() throws Exception {
         mockMvc.perform(post("/api/v1/customers")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .with(bankerJwt())
                         .content(CREATE_BODY.replace("CUS-1001", "CUS-1006")))
                 .andExpect(status().isBadRequest());
     }
@@ -166,34 +182,65 @@ class CustomerApiIntegrationTest {
         mockMvc.perform(post("/api/v1/customers")
                         .header("Idempotency-Key", "key-create-7")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .with(bankerJwt())
                         .content(CREATE_BODY.replace("CUS-1001", "CUS-1007")))
                 .andExpect(status().isAccepted());
 
-        mockMvc.perform(get("/api/v1/customers/CUS-1007"))
+        mockMvc.perform(get("/api/v1/customers/CUS-1007").with(jwt()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.customerId").value("CUS-1007"))
                 .andExpect(jsonPath("$.name").value("Jane Doe"))
                 .andExpect(jsonPath("$.processingStatus").value("PENDING"))
                 .andExpect(jsonPath("$.version").value(0));
 
-        mockMvc.perform(get("/api/v1/customers/CUS-1007/events"))
+        mockMvc.perform(get("/api/v1/customers/CUS-1007/events").with(jwt()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].type").value("CUSTOMER_CREATED"))
                 .andExpect(jsonPath("$[0].status").value("PENDING"));
 
-        mockMvc.perform(get("/api/v1/customers/CUS-9999"))
+        mockMvc.perform(get("/api/v1/customers/CUS-9999").with(jwt()))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void missingToken_returns401() throws Exception {
+        mockMvc.perform(post("/api/v1/customers")
+                        .header("Idempotency-Key", "key-sec-401")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(CREATE_BODY.replace("CUS-1001", "CUS-1401")))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void tokenWithoutBankerRole_writeIsForbidden() throws Exception {
+        mockMvc.perform(post("/api/v1/customers")
+                        .with(jwt()) // valid token, but no realm_access.roles → no BANKER
+                        .header("Idempotency-Key", "key-sec-403")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(CREATE_BODY.replace("CUS-1001", "CUS-1403")))
+                .andExpect(status().isForbidden());
     }
 
     private String createAndGetEventId(String customerId, String key) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/v1/customers")
                         .header("Idempotency-Key", key)
                         .contentType(MediaType.APPLICATION_JSON)
+                        .with(bankerJwt())
                         .content(CREATE_BODY.replace("CUS-1001", customerId)))
                 .andExpect(status().isAccepted())
                 .andReturn();
         JsonNode body = objectMapper.readTree(result.getResponse().getContentAsString(StandardCharsets.UTF_8));
         return body.get("eventId").asText();
+    }
+
+    /**
+     * A mock JWT carrying the {@code ROLE_BANKER} authority, which is what
+     * {@code SecurityConfig} derives from a real Keycloak token's
+     * {@code realm_access.roles} claim. The claim→authority mapping itself is
+     * covered end-to-end by the CI kind smoke test (real Keycloak token).
+     */
+    private static RequestPostProcessor bankerJwt() {
+        return jwt().authorities(new SimpleGrantedAuthority("ROLE_BANKER"));
     }
 }
