@@ -64,13 +64,60 @@ curl -X POST http://localhost:8080/api/v1/customers \
 
 Watch the event flow end to end: outbox → Kafka → both consumers → both stores. Then break a consumer on purpose and observe **retry → DLQ → replay**.
 
+## Security (Keycloak JWT)
+
+The API is an OAuth2 resource server: every request needs a JWT signed by the
+`hub` realm; write endpoints additionally require the `BANKER` realm role.
+Start Keycloak with the compose `security` profile, exchange the demo banker
+credentials for a token, and call the API with it:
+
+```bash
+docker compose --profile security up -d        # Keycloak on :8088 (imports infra/keycloak/realm-export.json)
+
+TOKEN=$(curl -s -X POST http://localhost:8088/realms/hub/protocol/openid-connect/token \
+  -d grant_type=password -d client_id=integration-api \
+  -d username=banker -d password=banker-dev | jq -r .access_token)
+
+curl -X POST http://localhost:8080/api/v1/customers \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Idempotency-Key: demo-002" -H "Content-Type: application/json" \
+  -d '{"customerId":"CUS-0002","name":"John Smith","email":"john@example.com","phone":"+64 22 000 0000","addresses":[],"kycStatus":"PENDING"}'
+```
+
+- No token → `401 Unauthorized`
+- Token without the `BANKER` role → `403 Forbidden` (e.g. a plain login from Swagger UI)
+
+The Swagger UI (`/swagger-ui.html`) has an *Authorize* button for the Bearer
+token. Local override: `KEYCLOAK_ISSUER_URI` (default `http://localhost:8088/realms/hub`).
+
+## Kubernetes
+
+`k8s/` contains kustomize manifests (namespace `hub`) for the full stack:
+Postgres, single-broker Kafka (KRaft), Keycloak, and the three services with
+Deployments, Services, ConfigMaps/Secrets, readiness/liveness probes and CPU
+HPAs. CI runs a **kind smoke deploy on every `main` push**: boots the cluster,
+applies the manifests, then proves the secured end-to-end path — get a JWT from
+Keycloak, POST a customer, expect `202`.
+
+Local run (needs `kind`):
+
+```bash
+kind create cluster --name hub
+kubectl apply -k k8s/
+kubectl -n hub rollout status deployment/integration-api --timeout=240s
+```
+
+Production notes: Kafka is best managed by the Strimzi Operator; secrets should
+come from External Secrets/Vault (the committed Secret is demo-only); the HPAs
+need the metrics-server add-on.
+
 ## Roadmap / status
 
 - [x] M0 — repo scaffold, infra compose, parent POM
 - [x] M1 — integration-api REST + JPA + Flyway + OpenAPI + transactional outbox (write side) + Testcontainers tests
 - [x] M2 — outbox relay → Kafka (transactional producer) + profile-service (idempotency, retry, DLQ, replay) — *core story*
 - [x] M3 — data-loader fan-out (second independent consumer group, own Flyway schema), observability (Micrometer + Prometheus, Micrometer Tracing + Zipkin, JSON structured logs with MDC correlation ids), non-root Dockerfiles, CI builds and pushes images to GHCR
-- [ ] M4 — Keycloak JWT security, k8s manifests + kind smoke deploy, final polish
+- [x] M4 — Keycloak JWT security (OAuth2 resource server, BANKER role for writes), k8s manifests (Deployment/Service/ConfigMap/Secret/HPA) + kind smoke deploy in CI, final polish
 
 ## Contributing / license
 

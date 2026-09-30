@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hub-config
+data:
+  # Shared runtime configuration for the three services (non-secret).
+  # Secrets (DB_PASSWORD) live in hub-secrets.
+  DB_URL: jdbc:postgresql://postgres:5432/hub
+  DB_USER: hub
+  KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+  # Issuer must match the `iss` claim Keycloak puts in its JWTs:
+  # http://<keycloak-service>:<keycloak-port>/realms/hub
+  KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/hub
+  # Zipkin is optional in this demo (docker compose --profile observability).
+  # When absent from the cluster the reporter logs connection warnings only.
+  ZIPKIN_ENDPOINT: http://zipkin:9411/api/v2/spans

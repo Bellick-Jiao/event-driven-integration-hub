@@ -17,7 +17,7 @@ env:
   IMAGE_BASE: ghcr.io/bellick-jiao/integration-hub
 
 jobs:
-  # ---------- 1. 构建 + 测试（含 Testcontainers 集成测试）----------
+  # ---------- 1. Build + unit/integration tests (Testcontainers) ----------
   build:
     runs-on: ubuntu-latest
     steps:
@@ -43,7 +43,6 @@ jobs:
             services/**/target/failsafe-reports
 
   # ---------- 2. Build images and push to GHCR (main / tag) ----------
-  # M3 enabled: package the apps, build the per-service image, push.
   docker:
     needs: build
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
@@ -86,11 +85,13 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ---------- 3. kind 集群部署冒烟（main）----------
-  # TODO M3 启用：需要 k8s/ 清单
+  # ---------- 3. kind cluster smoke deploy (main) ----------
+  # Boots the full stack in a local Kubernetes (kind): Postgres + Kafka +
+  # Keycloak + the three services, then proves the secured end-to-end path:
+  # get a Keycloak JWT -> POST a customer -> 202 Accepted -> outbox/relay.
   smoke:
     needs: docker
-    if: false
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -101,13 +102,50 @@ jobs:
 
       - name: Deploy manifests
         run: |
-          kubectl apply -f k8s/
-          kubectl rollout status deployment/integration-api --timeout=180s
-          kubectl rollout status deployment/profile-service --timeout=180s
-          kubectl rollout status deployment/data-loader --timeout=180s
+          kubectl apply -k k8s/
+          kubectl -n hub rollout status statefulset/kafka --timeout=240s
+          kubectl -n hub rollout status deployment/keycloak --timeout=300s
 
-      - name: Smoke test (health)
+      - name: Create Kafka topics
         run: |
-          kubectl port-forward svc/integration-api 8080:80 &
-          sleep 5
+          # AUTO_CREATE_TOPICS is off; create the topics like scripts/init-kafka.sh does.
+          kubectl -n hub exec kafka-0 -- /opt/kafka/bin/kafka-topics.sh \
+            --bootstrap-server localhost:9092 \
+            --create --if-not-exists \
+            --topic customer.profile.events \
+            --partitions 3 --replication-factor 1 \
+            --config cleanup.policy=compact
+          kubectl -n hub exec kafka-0 -- /opt/kafka/bin/kafka-topics.sh \
+            --bootstrap-server localhost:9092 \
+            --create --if-not-exists \
+            --topic customer.profile.events.dlq \
+            --partitions 3 --replication-factor 1
+
+      - name: Wait for services
+        run: |
+          kubectl -n hub rollout status deployment/integration-api --timeout=240s
+          kubectl -n hub rollout status deployment/profile-service --timeout=240s
+          kubectl -n hub rollout status deployment/data-loader --timeout=240s
+
+      - name: End-to-end smoke (Keycloak JWT -> POST -> 202)
+        run: |
+          kubectl -n hub port-forward svc/integration-api 8080:80 &
+          kubectl -n hub port-forward svc/keycloak 8088:8080 &
+          # Wait for the port-forwards and Keycloak OIDC discovery to come up.
+          for i in $(seq 1 90); do
+            curl -fsS http://localhost:8088/realms/hub/.well-known/openid-configuration >/dev/null 2>&1 && break
+            sleep 2
+          done
+          # Exchange the demo banker credentials for a JWT (password grant).
+          TOKEN=$(curl -fsS -X POST http://localhost:8088/realms/hub/protocol/openid-connect/token \
+            -d grant_type=password -d client_id=integration-api \
+            -d username=banker -d password=banker-dev | jq -r .access_token)
+          test -n "$TOKEN"
+          # Health probe is public (no token needed).
           curl -fsS http://localhost:8080/actuator/health
+          # Secured write: requires the BANKER role from the JWT.
+          curl -fsS -X POST http://localhost:8080/api/v1/customers \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Idempotency-Key: smoke-001" \
+            -H "Content-Type: application/json" \
+            -d '{"customerId":"CUS-SMOKE-1","name":"Smoke Test","email":"smoke@example.com","addresses":[],"kycStatus":"PENDING"}'

@@ -1,0 +1,58 @@
+# PostgreSQL for the smoke cluster.
+#
+# Demo note: data lives in an emptyDir on purpose — kind ships no dynamic
+# storage provisioner, and the smoke test only proves the services boot and
+# talk to each other. In production use a StatefulSet + PVC (or a managed
+# Postgres / CloudNativePG operator) for durability.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  labels:
+    app: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: postgres }
+  template:
+    metadata:
+      labels: { app: postgres }
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - { containerPort: 5432 }
+          env:
+            - { name: POSTGRES_USER, value: "hub" }
+            - { name: POSTGRES_PASSWORD, valueFrom: { secretKeyRef: { name: hub-secrets, key: DB_PASSWORD } } }
+            - { name: POSTGRES_DB, value: "hub" }
+          volumeMounts:
+            - { name: pgdata, mountPath: /var/lib/postgresql/data }
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "hub", "-d", "hub"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 5
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits:   { cpu: 500m, memory: 512Mi }
+      volumes:
+        - name: pgdata
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  labels:
+    app: postgres
+spec:
+  selector:
+    app: postgres
+  ports:
+    - { port: 5432, targetPort: 5432 }

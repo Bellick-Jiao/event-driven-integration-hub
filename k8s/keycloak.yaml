@@ -1,0 +1,122 @@
+# Keycloak 26 (OIDC provider) for the smoke cluster.
+#
+# The realm is imported at startup from the ConfigMap below (same
+# infra/keycloak/realm-export.json used by docker-compose --profile security).
+# Data is not persisted here — the smoke test only needs token issuance.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hub-keycloak-realm
+data:
+  realm-export.json: |-
+    {
+      "realm": "hub",
+      "enabled": true,
+      "sslRequired": "external",
+      "registrationAllowed": false,
+      "loginWithEmailAllowed": false,
+      "duplicateEmailsAllowed": false,
+      "resetPasswordAllowed": false,
+      "editUsernameAllowed": false,
+      "bruteForceProtected": true,
+      "roles": {
+        "realm": [
+          {
+            "name": "BANKER",
+            "description": "Role required to write customer profiles (POST/PATCH /api/v1/customers)"
+          }
+        ]
+      },
+      "users": [
+        {
+          "username": "banker",
+          "enabled": true,
+          "emailVerified": true,
+          "firstName": "Demo",
+          "lastName": "Banker",
+          "email": "banker@example.com",
+          "credentials": [
+            {
+              "type": "password",
+              "value": "banker-dev",
+              "temporary": false
+            }
+          ],
+          "realmRoles": ["BANKER"]
+        }
+      ],
+      "clients": [
+        {
+          "clientId": "integration-api",
+          "enabled": true,
+          "protocol": "openid-connect",
+          "publicClient": true,
+          "standardFlowEnabled": true,
+          "implicitFlowEnabled": false,
+          "directAccessGrantsEnabled": true,
+          "serviceAccountsEnabled": false,
+          "redirectUris": ["*"],
+          "webOrigins": ["*"]
+        }
+      ]
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  labels:
+    app: keycloak
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: keycloak }
+  template:
+    metadata:
+      labels: { app: keycloak }
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:26.0
+          command: ["start-dev", "--import-realm"]
+          args: ["--http-port=8080"]
+          ports:
+            - { containerPort: 8080 }
+          env:
+            - { name: KEYCLOAK_ADMIN, value: "admin" }
+            - { name: KEYCLOAK_ADMIN_PASSWORD, value: "admin" }
+            - { name: KC_DB, value: "dev-file" } # embedded H2 file, enough for smoke
+          volumeMounts:
+            - { name: realm, mountPath: /opt/keycloak/data/import, readOnly: true }
+          readinessProbe:
+            httpGet:
+              path: /realms/hub/.well-known/openid-configuration
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            requests: { cpu: 200m, memory: 512Mi }
+            limits:   { cpu: 1, memory: 1Gi }
+      volumes:
+        - name: realm
+          configMap:
+            name: hub-keycloak-realm
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  labels:
+    app: keycloak
+spec:
+  selector:
+    app: keycloak
+  # Port 8080 on purpose: Keycloak signs JWTs with `iss=http://keycloak:8080/realms/hub`,
+  # and integration-api validates against exactly that issuer (hub-config).
+  ports:
+    - { port: 8080, targetPort: 8080 }
