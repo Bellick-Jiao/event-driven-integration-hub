@@ -27,7 +27,7 @@
 - `OutboxRelay` polls the oldest `PENDING` outbox rows (`@Scheduled`, batching) and publishes them to
   `customer.profile.events` with a **transactional producer** (`executeInTransaction` + producer idempotence).
   Rows are flipped to `PUBLISHED` only after the Kafka transaction commits; failures stay `PENDING` and retry
-  on the next poll — no message loss, at-least-once delivery (design.md §9).
+  on the next poll — no message loss, at-least-once delivery (design.md §10).
 
 **profile-service (consumer side)**
 - `ProfileEventConsumer` (`@KafkaListener`, independent group) — **idempotent by `eventId`**

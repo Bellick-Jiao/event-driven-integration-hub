@@ -57,9 +57,15 @@ See `docs/architecture-diagram.html` for the architecture diagram (open in a bro
 
 ```
                     ┌─────────────────────────────────────────────────────┐
-   Banker Portal ──▶│  integration-api  (Spring Boot 3, :8080)           │
-   API Clients  ──▶│  REST API · JWT Security · Idempotency · Outbox     │
-   (OAuth2 JWT)    │  Postgres: customer + outbox + idempotency_keys     │
+   Banker Portal ──▶│  Kong API Gateway (production proposal)             │
+   API Clients  ──▶│  rate limit · audit · routing · JWT pass-through     │
+   (OAuth2 JWT)    └───────────────┬─────────────────────────────────────┘
+                                    │ HTTPS + JWT
+                                    ▼
+                    ┌─────────────────────────────────────────────────────┐
+                    │  integration-api  (Spring Boot 3, :8080)           │
+                    │  REST API · JWT Security · Idempotency · Outbox     │
+                    │  Postgres: customer + outbox + idempotency_keys     │
                     └───────────────┬─────────────────────────────────────┘
                                     │ ① write customer + outbox in one TX
                                     ▼
@@ -234,7 +240,67 @@ business validation, `500` internal error.
 
 ---
 
-## 8. Data model
+## 8. API ecosystem (API gateway)
+
+The repository demonstrates the **contract → gateway → service → event**
+path of a real-world API ecosystem. The gateway itself is **documented, not
+deployed**: keeping the demo stack small lets the local run and the kind
+smoke stay fast, while the design below shows production posture.
+
+### 8.1 Contract-first
+
+- Every endpoint ships an OpenAPI 3 contract (`/v3/api-docs` + Swagger UI);
+  the contract is the single source of truth for consumers.
+- Errors are uniform ProblemDetail (RFC 9457), so client and gateway logic
+  (retry, alerting) stay simple and predictable.
+
+### 8.2 Gateway responsibilities (production proposal: Kong, DB-less)
+
+In production the gateway sits between the channel clients and
+`integration-api` and owns cross-cutting concerns the service should not:
+
+| Concern | How | Why it matters here |
+| --- | --- | --- |
+| Routing | host/path → `integration-api` upstream | one entry point; services stay hidden behind the gateway |
+| Rate limiting | per-client (API key / JWT subject) quotas | protects the API and the downstream Kafka load under burst |
+| Audit | access log per request (client, path, status, latency) | banking-grade traceability of who called what |
+| AuthN/AuthZ fronting | validate JWT at the edge; pass validated identity downstream | defense in depth; the service still validates (belt and braces) |
+| TLS termination | HTTPS to clients, HTTP inside the cluster | certificates live at the edge |
+
+### 8.3 DB-less Kong reference (what the config would look like)
+
+```yaml
+# kong.yaml (DB-less): declarative gateway config
+_format_version: "2.1"
+services:
+  - name: integration-api
+    url: http://integration-api:8080
+    routes:
+      - name: customers
+        paths: [/api/v1/customers]
+        strip_path: false
+    plugins:
+      - name: rate-limiting
+        config: { minute: 60, policy: local }
+      - name: correlation-id
+        config: { header_name: X-Correlation-ID, generator: uuid#counter }
+      - name: key-auth           # or openid-connect for JWT validation
+        config: { key_names: [X-API-Key], hide_credentials: true }
+```
+
+### 8.4 Where it fits in this POC
+
+- **Local / kind demo**: clients call `integration-api` directly (no gateway
+  in docker-compose or the k8s manifests) — the demo stays one command.
+- **Interview talking point**: "OpenAPI defines the contract; in production an
+  API gateway adds rate limiting, audit and routing in front of the service;
+  the service stays focused on business logic and Kafka integration."
+- Running it (DB-less Kong in a compose profile + a smoke request) is the
+  cheapest next milestone; see §18 Extension ideas.
+
+---
+
+## 9. Data model
 
 **integration-api database** (one DB, multiple tables — no need to split
 databases for a POC):
@@ -262,7 +328,7 @@ loaded_at)`.
 
 ---
 
-## 9. Kafka design
+## 10. Kafka design
 
 | Item | Design |
 | --- | --- |
@@ -290,7 +356,7 @@ docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server loca
 
 ---
 
-## 10. Integration pattern catalogue
+## 11. Integration pattern catalogue
 
 | Pattern | Where implemented | Problem solved | One-line explanation |
 | --- | --- | --- | --- |
@@ -305,7 +371,7 @@ docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server loca
 
 ---
 
-## 11. Observability design
+## 12. Observability design
 
 - **Structured logs**: logstash-logback-encoder emits JSON; MDC injects
   `traceId / eventId / customerId / service`; **PII masking** (emails and
@@ -321,7 +387,7 @@ docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server loca
 
 ---
 
-## 12. Security design
+## 13. Security design
 
 - **API protection**: integration-api is an OAuth2 Resource Server validating
   JWTs against Keycloak's JWKS; writes require `ROLE_BANKER`, reads also
@@ -336,7 +402,7 @@ docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server loca
 
 ---
 
-## 13. Testing strategy
+## 14. Testing strategy
 
 | Level | Scope | Tooling |
 | --- | --- | --- |
@@ -350,7 +416,7 @@ docker compose exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server loca
 
 ---
 
-## 14. CI/CD and containerization
+## 15. CI/CD and containerization
 
 **GitHub Actions `ci.yml` pipeline (three stages)**:
 
@@ -373,7 +439,7 @@ docker-compose suffices — documented).
 
 ---
 
-## 15. Local run guide
+## 16. Local run guide
 
 ```bash
 # 0. Prerequisites: Docker Desktop (Windows) + JDK 21 + Maven
@@ -398,7 +464,7 @@ curl -X POST http://localhost:8080/api/v1/customers \
 
 ---
 
-## 16. Milestone roadmap (each stage ships something demonstrable)
+## 17. Milestone roadmap (each stage ships something demonstrable)
 
 | Stage | Content | Practice / deliverables | Suggested effort |
 | --- | --- | --- | --- |
@@ -413,15 +479,18 @@ curl -X POST http://localhost:8080/api/v1/customers \
 
 ---
 
-## 17. Extension ideas (after the main line, by value-for-effort)
+## 18. Extension ideas (after the main line, by value-for-effort)
 
 1. **Schema Registry** (Apicurio/Confluent): centralised message-contract
    management + compatibility checks — directly matches the "integration
    platform" mindset.
 2. **mTLS service-to-service communication**: self-signed CA script, showing
    certificates and mutual auth (the role mentions certificates).
-3. **API gateway in front** (Apisix / Spring Cloud Gateway): rate limiting,
-   audit, routing — maps to "API gateway / API management".
+3. **API gateway in front** (Kong / Apisix / Spring Cloud Gateway): rate
+   limiting, audit, routing — maps to "API gateway / API management".
+   The design and architecture placement are already documented in
+   [§8](#8-api-ecosystem-api-gateway); running it (DB-less Kong in a compose
+   profile + a smoke request) is a half-day milestone.
 4. **Kafka SASL/SSL**: upgrade from plaintext to authenticated, encrypted
    transport — deeper security.
 5. **Contract tests with Pact**: consumer-driven contracts, verifying

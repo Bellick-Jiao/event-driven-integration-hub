@@ -64,4 +64,4 @@
 
 ---
 
-> Candidate extensions: Schema Registry (centralized message contracts), mTLS (service-to-service mutual auth), API gateway in front (rate limiting / audit). These are tracked in `docs/design.md` §17.
+> Candidate extensions: Schema Registry (centralized message contracts), mTLS (service-to-service mutual auth), API gateway in front (rate limiting / audit). These are tracked in `docs/design.md` §18; the API gateway design lives in `docs/design.md` §8.
