@@ -57,15 +57,9 @@ See `docs/architecture-diagram.html` for the architecture diagram (open in a bro
 
 ```
                     ┌─────────────────────────────────────────────────────┐
-   Banker Portal ──▶│  Kong API Gateway (production proposal)             │
-   API Clients  ──▶│  rate limit · audit · routing · JWT pass-through     │
-   (OAuth2 JWT)    └───────────────┬─────────────────────────────────────┘
-                                    │ HTTPS + JWT
-                                    ▼
-                    ┌─────────────────────────────────────────────────────┐
-                    │  integration-api  (Spring Boot 3, :8080)           │
-                    │  REST API · JWT Security · Idempotency · Outbox     │
-                    │  Postgres: customer + outbox + idempotency_keys     │
+   Banker Portal ──▶│  integration-api  (Spring Boot 3, :8080)           │
+   API Clients  ──▶│  REST API · JWT Security · Idempotency · Outbox     │
+   (OAuth2 JWT)    │  Postgres: customer + outbox + idempotency_keys     │
                     └───────────────┬─────────────────────────────────────┘
                                     │ ① write customer + outbox in one TX
                                     ▼
@@ -488,9 +482,9 @@ curl -X POST http://localhost:8080/api/v1/customers \
    certificates and mutual auth (the role mentions certificates).
 3. **API gateway in front** (Kong / Apisix / Spring Cloud Gateway): rate
    limiting, audit, routing — maps to "API gateway / API management".
-   The design and architecture placement are already documented in
-   [§8](#8-api-ecosystem-api-gateway); running it (DB-less Kong in a compose
-   profile + a smoke request) is a half-day milestone.
+   The design is documented in [§8](#8-api-ecosystem-api-gateway); running it
+   (DB-less Kong in a compose profile + a smoke request) is a half-day
+   milestone.
 4. **Kafka SASL/SSL**: upgrade from plaintext to authenticated, encrypted
    transport — deeper security.
 5. **Contract tests with Pact**: consumer-driven contracts, verifying

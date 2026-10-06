@@ -15,11 +15,6 @@
           <mxGeometry x="80" y="90" width="220" height="60" as="geometry" />
         </mxCell>
 
-        <!-- API gateway (production proposal) -->
-        <mxCell id="gateway" value="Kong API Gateway&#10;(production proposal)&#10;rate limit · audit · routing" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;dashed=1;fontSize=12;" vertex="1" parent="1">
-          <mxGeometry x="80" y="155" width="220" height="60" as="geometry" />
-        </mxCell>
-
         <!-- integration-api -->
         <mxCell id="api" value="integration-api  :8080&#10;REST · Idempotency (Idempotency-Key)&#10;Transactional Outbox (write side)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;align=center;" vertex="1" parent="1">
           <mxGeometry x="80" y="220" width="220" height="90" as="geometry" />
@@ -72,10 +67,7 @@
         </mxCell>
 
         <!-- Edges -->
-        <mxCell id="e-clients-gw" value="POST /api/v1/customers" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="clients" target="gateway">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e-gw-api" value="forward · rate limit · audit" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="gateway" target="api">
+        <mxCell id="e-clients-api" value="POST /api/v1/customers" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="clients" target="api">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="e-api-pg" value="customer + outbox (same transaction)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;" edge="1" parent="1" source="api" target="pg-outbox">
